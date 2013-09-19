@@ -1,0 +1,7 @@
+name = Ad
+package = Custom
+description = Custom Module to control ads
+core = 7.x
+dependencies[] = block
+
+files[] = ad.module

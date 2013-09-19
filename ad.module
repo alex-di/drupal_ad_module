@@ -1,0 +1,253 @@
+<?php
+/*
+ * TODO: Make lemmon-slider a library instead of inc file
+ */
+function ad_menu() {
+    $items['admin/content/ads'] = array(
+        'title' => t('Ads configuration'),
+        'access callback' => 'user_access',
+        'access arguments' => array('administer site configuration'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('ad_admin_settings'),
+        'type' => MENU_LOCAL_TASK,
+        'file' => 'ad.admin.inc'
+    );
+    $items['admin/content/ads/blocks'] = array(
+        'title' => t('Ad blocks'),
+        'access callback' => 'user_access',
+        'access arguments' => array('administer site configuration'),
+        'page callback' => 'ad_admin_blocks_settings',
+        'type' => MENU_LOCAL_TASK,
+        'file' => 'ad.admin.inc',
+        'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    );
+    $items['admin/content/ads/blocks/add'] = array(
+        'title' => t('Ad block add'),
+        'access callback' => 'user_access',
+        'access arguments' => array('administer site configuration'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('ad_admin_blocks_add'),
+        'type' => MENU_NORMAL_ITEM,
+        'file' => 'ad.admin.inc',
+        'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    );
+    $items['admin/content/ads/banners'] = array(
+        'title' => t('Ad banners'),
+        'access callback' => 'user_access',
+        'access arguments' => array('administer site configuration'),
+        'page callback' => 'ad_admin_banner_settings',
+        'type' => MENU_NORMAL_ITEM,
+        'file' => 'ad.admin.inc',
+        'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    );
+    $items['admin/content/ads/banners/add'] = array(
+        'title' => t('Ad banner type add'),
+        'access callback' => 'user_access',
+        'access arguments' => array('administer site configuration'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('ad_admin_banner_add'),
+        'type' => MENU_NORMAL_ITEM,
+        'file' => 'ad.admin.inc',
+        'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    );
+    $items['admin/content/ads/banners/%ad_menu'] = array(
+        'title' => t('Edit banner'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('ad_admin_banner_edit_form', 4),
+        'access callback' => 'user_access',
+        'access arguments' => array('administer site configuration'),
+        'file' => 'ad.admin.inc',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    );
+    return $items;
+}
+
+/**
+ * Menu loader callback. Load a webform node if the given nid is a webform.
+ */
+function ad_menu_load($id) {
+    $tpl = db_select('ad_tpl', 't')
+            ->fields('t')
+            ->condition('id', $id, '=')
+            ->execute()
+            ->fetch();
+    if (!$tpl)
+        return FALSE;
+    return $tpl;
+}
+
+function ad_theme() {
+    return array(
+        'type_all' => array(
+            'variables' => array(
+                'items' => null,
+                'hash' => md5(rand(100000000000, 999999999999)),
+                'attr' => array(),
+                'content' => null,
+            ),
+            'template' => 'type-all',
+        ),
+        'no_slider' => array(
+            'variables' => array(
+                'items' => null,
+                'hash' => md5(rand(100000000000, 999999999999)),
+                'attr' => array(),
+                'content' => null,
+            ),
+            'template' => 'type-noslider',
+        )
+    );
+}
+
+// Эта функция добавляет js и css при использовании модуля
+function ad_preprocess_html(&$vars) {
+    $path = drupal_get_path('module', 'ad');
+    drupal_add_css($path . '/inc/ad.css');
+    drupal_add_js($path . '/inc/lemmon-slider.js', array('weight' => 10));
+    drupal_add_js("
+    function sliderAutoplay(hash) {
+        jQuery('.ad-wrapper-'+hash).trigger('nextSlide');
+        sliderTimeout = setTimeout(function() {
+            sliderAutoplay()
+        }, 3000);
+    }", 'inline');
+}
+
+// Собственно самая главная функция. Формирует рекламные блоки
+function ad_func($type = 'c', $limit = null, $content = null, $theme = 'type_all') {
+    $i = 0;
+    $items = array();
+    global $rendered;
+    if (!isset($rendered[$type]))
+        $rendered[$type] = 0;
+    $data = db_select('ad_tpl', 'a')
+            ->fields('a', array('tpl', 'amt'))
+            ->condition('id', $type)
+            ->execute()
+            ->fetchObject();
+    if ($data) {
+        $amount = $data->amt;
+        $template = $data->tpl;
+        if ($limit && $limit != '0') {
+            if ($limit >= 1)
+                $count = ($amount - $rendered[$type] > $limit) ? $limit : $amount - $rendered[$type];
+            else
+                $count = ceil($amount * $limit);
+        } else {
+            $count = $amount - $rendered[$type];
+        };
+        while ($i < $count) {
+            $items[] = str_replace('[TRAND]', rand(100000000000, 999999999999), $template);
+            $i++;
+        }
+        $rendered[$type] += $count;
+        $hash = md5(rand(100000000000, 999999999999) . $type);
+        $attr = array('class' => array('ad-wrapper', $type . '-type', $theme));
+        $attr['class'][] = 'ad-wrapper-' . $hash;
+        $attr['class'][] = ($content) ? 'with-content' : 'no-content';
+        if (!empty($items))
+            return theme($theme, array('items' => $items, 'attr' => $attr, 'hash' => $hash, 'content' => $content));
+        else
+            return '';
+    }
+    else
+        return '';
+}
+
+function ad_block_info() {
+    $data = db_select('ad_block', 'a')
+            ->fields('a', array('id', 'type', 'name'))
+            ->execute()
+            ->fetchAll();
+    $blocks = array();
+    foreach ($data AS $item) {
+        $blocks[$item->id] = array(
+            'info' => (empty($item->name)) ? 'Ads: Ad block with id ' . $item->id . ' of type ' . $item->type : 'Ads: ' . $item->name,
+        );
+    }
+    return $blocks;
+}
+
+function ad_block_view($delta = '') {
+    $block = array();
+    if (!empty($delta)) {
+        $data = db_select('ad_block', 'a')
+                ->fields('a', array('type', 'amt', 'content', 'slider'))
+                ->condition('id', $delta)
+                ->execute()
+                ->fetchObject();
+        if ($data)
+            $block['content'] = ad_func($data->type, $data->amt, $data->content, ($data->slider) ? 'type_all' : 'no_slider');
+    }
+    return $block;
+}
+
+function ad_block_configure($delta = '') {
+    $form = array();
+    if (!empty($delta)) {
+        $data = db_select('ad_block', 'a')
+                ->fields('a')
+                ->condition('id', $delta)
+                ->execute()
+                ->fetchObject();
+        if ($data) {
+            $opts = db_select('ad_tpl', 'a')
+                    ->fields('a', array('id'))
+                    ->distinct()
+                    ->execute()
+                    ->fetchCol();
+            if (!$opts && empty($opts)) {
+                drupal_set_message(t('Set some templates first'), 'error');
+                drupal_goto('admin/content/ads/banner/add');
+            } else {
+                $options = array();
+                foreach ($opts AS $id)
+                    $options[$id] = $id;
+                $form['amount'] = array(
+                    '#type' => 'textfield',
+                    '#title' => t('Amount of banners of type'),
+                    '#default_value' => $data->amt,
+                    '#description' => t('If set to 0 displays all avalible banners'),
+                );
+                $form['type'] = array(
+                    '#type' => 'select',
+                    '#title' => 'Banner template',
+                    '#options' => $options,
+                    '#default_value' => $data->type,
+                );
+                $form['name'] = array(
+                    '#type' => 'textfield',
+                    '#title' => 'Block name',
+                    '#default_value' => $data->name,
+                );
+                $form['content'] = array(
+                    '#type' => 'text_format',
+                    '#title' => 'Additional content',
+                    '#description' => 'Usage of this content provides by your templates',
+                    '#default_value' => $data->content,
+                );
+                $form['slider'] = array(
+                    '#type' => 'checkbox',
+                    '#title' => 'Enable slider',
+                    '#default_value' => $data->slider,
+                );
+                return $form;
+            }
+        }
+    }
+}
+
+function ad_block_save($delta = '', $edit = array()) {
+    db_merge('ad_block')
+            ->key(array('id' => $delta))
+            ->fields(array(
+                'name' => $edit['name'],
+                'amt' => $edit['amount'],
+                'type' => $edit['type'],
+                'content' => $edit['content']['value'],
+                'slider' => $edit['slider']
+                    )
+            )
+            ->execute();
+}

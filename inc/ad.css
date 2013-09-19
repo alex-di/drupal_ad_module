@@ -1,0 +1,6 @@
+/* Necessary CSS */
+.ad-wrapper,.ad-wrapper .slider    { overflow:hidden; position:relative; }
+.ad-wrapper .slider ul { margin:0; padding:0; }
+.ad-wrapper .slider li { float:left; padding: 10px 25px ; list-style:none; width: 150px;}
+/* IE6 issues */
+.ad-wrapper .slider ul { width:100%; }
