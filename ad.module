@@ -1,7 +1,9 @@
 <?php
+
 /*
  * TODO: Make lemmon-slider a library instead of inc file
  */
+
 function ad_menu() {
     $items['admin/content/ads'] = array(
         'title' => t('Ads configuration'),
@@ -121,11 +123,18 @@ function ad_func($type = 'c', $limit = null, $content = null, $theme = 'type_all
     global $rendered;
     if (!isset($rendered[$type]))
         $rendered[$type] = 0;
-    $data = db_select('ad_tpl', 'a')
-            ->fields('a', array('tpl', 'amt'))
-            ->condition('id', $type)
-            ->execute()
-            ->fetchObject();
+    $cid = $type . '-ad-cache';
+    if ($cached = cache_get($cid)) {
+        $data = $cached->data;
+    } else {
+        $data = db_select('ad_tpl', 'a')
+                ->fields('a', array('tpl', 'amt'))
+                ->condition('id', $type)
+                ->execute()
+                ->fetchObject();
+        if ($data)
+            cache_set($cid, $data, 'cache', strtotime('+7 days'));
+    }
     if ($data) {
         $amount = $data->amt;
         $template = $data->tpl;
@@ -156,10 +165,17 @@ function ad_func($type = 'c', $limit = null, $content = null, $theme = 'type_all
 }
 
 function ad_block_info() {
-    $data = db_select('ad_block', 'a')
-            ->fields('a', array('id', 'type', 'name'))
-            ->execute()
-            ->fetchAll();
+    $cid = $type . '-ad-block-cache';
+    if ($cached = cache_get($cid)) {
+        $data = $cached->data;
+    } else {
+        $data = db_select('ad_block', 'a')
+                ->fields('a', array('id', 'type', 'name'))
+                ->execute()
+                ->fetchAll();
+        if ($data)
+            cache_set($cid, $data, 'cache', strtotime('+7 days'));
+    }
     $blocks = array();
     foreach ($data AS $item) {
         $blocks[$item->id] = array(
