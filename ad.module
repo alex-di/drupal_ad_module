@@ -8,7 +8,7 @@ function ad_menu() {
     $items['admin/content/ads'] = array(
         'title' => t('Ads configuration'),
         'access callback' => 'user_access',
-        'access arguments' => array('administer site configuration'),
+        'access arguments' => array('access ads config'),
         'page callback' => 'drupal_get_form',
         'page arguments' => array('ad_admin_settings'),
         'type' => MENU_LOCAL_TASK,
@@ -17,7 +17,7 @@ function ad_menu() {
     $items['admin/content/ads/blocks'] = array(
         'title' => t('Ad blocks'),
         'access callback' => 'user_access',
-        'access arguments' => array('administer site configuration'),
+        'access arguments' => array('access ads config'),
         'page callback' => 'ad_admin_blocks_settings',
         'type' => MENU_LOCAL_TASK,
         'file' => 'ad.admin.inc',
@@ -26,7 +26,7 @@ function ad_menu() {
     $items['admin/content/ads/blocks/add'] = array(
         'title' => t('Ad block add'),
         'access callback' => 'user_access',
-        'access arguments' => array('administer site configuration'),
+        'access arguments' => array('access ads config'),
         'page callback' => 'drupal_get_form',
         'page arguments' => array('ad_admin_blocks_add'),
         'type' => MENU_NORMAL_ITEM,
@@ -36,7 +36,7 @@ function ad_menu() {
     $items['admin/content/ads/banners'] = array(
         'title' => t('Ad banners'),
         'access callback' => 'user_access',
-        'access arguments' => array('administer site configuration'),
+        'access arguments' => array('access ads config'),
         'page callback' => 'ad_admin_banner_settings',
         'type' => MENU_NORMAL_ITEM,
         'file' => 'ad.admin.inc',
@@ -45,7 +45,7 @@ function ad_menu() {
     $items['admin/content/ads/banners/add'] = array(
         'title' => t('Ad banner type add'),
         'access callback' => 'user_access',
-        'access arguments' => array('administer site configuration'),
+        'access arguments' => array('access ads config'),
         'page callback' => 'drupal_get_form',
         'page arguments' => array('ad_admin_banner_add'),
         'type' => MENU_NORMAL_ITEM,
@@ -57,7 +57,7 @@ function ad_menu() {
         'page callback' => 'drupal_get_form',
         'page arguments' => array('ad_admin_banner_edit_form', 4),
         'access callback' => 'user_access',
-        'access arguments' => array('administer site configuration'),
+        'access arguments' => array('access ads config'),
         'file' => 'ad.admin.inc',
         'type' => MENU_DEFAULT_LOCAL_TASK,
         'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
@@ -266,4 +266,12 @@ function ad_block_save($delta = '', $edit = array()) {
                     )
             )
             ->execute();
+}
+
+function ad_permission() {
+    return array(
+        'access ads config' => array(
+            'title' => t('Access for change ads configuration'),
+        )
+    );
 }
